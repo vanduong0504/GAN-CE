@@ -45,19 +45,16 @@ from GA import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_gpu', type=int, default=8, help='num_gpu')
-
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
 parser.add_argument('--n_epochs', type=int, default=10, help='number of epochs of training')
 parser.add_argument('--batchSize', type=int, default=1, help='size of the batches')
 parser.add_argument('--dataroot', type=str, default='database/horse2zebra', help='root directory of the dataset')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
-# parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
 parser.add_argument('--size', type=int, default=256, help='size of the data crop (squared assumed)')
 parser.add_argument('--input_nc', type=int, default=3, help='number of channels of input data')
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
 parser.add_argument('--cuda',type=bool, default=True, help='use GPU computation')
 parser.add_argument('--mode',type=str, default='test', help='select mode_folder[train/test/val]')
-# parser.add_argument('--n_cpu', type=int, default=16, help='number of cpu threads to use during batch generation')
 parser.add_argument('--G_A_path',type=str, required=True)
 parser.add_argument('--G_B_path',type=str, required=True)
 parser.add_argument('--D_A_path',type=str, required=True)
@@ -109,8 +106,6 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
         netG_B2A.eval()
         
     criterion_GAN = torch.nn.MSELoss()
-    # criterion_cycle = torch.nn.L1Loss()
-    # criterion_identity = torch.nn.L1Loss()
     fitness=0   
     cfg_mask=compute_layer_mask(mask_input,mask_chns)
     cfg_full_mask=[y for x in cfg_mask for y in x]
@@ -119,7 +114,6 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
     start_mask=np.ones(3)
     end_mask=cfg_mask[cfg_id]
   
-    
     for m in model.modules():
         if isinstance(m, nn.Conv2d):
  
@@ -187,14 +181,6 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
     Tensor = torch.cuda.FloatTensor if opt.cuda else torch.Tensor
     input_A = Tensor(opt.batchSize, opt.input_nc, opt.size, opt.size)
     input_B = Tensor(opt.batchSize, opt.output_nc, opt.size, opt.size)
-    # target_real = Variable(Tensor(opt.batchSize).fill_(1.0), requires_grad=False)
-    # target_fake = Variable(Tensor(opt.batchSize).fill_(0.0), requires_grad=False)
-    # fake_A_buffer = ReplayBuffer()
-    # fake_B_buffer = ReplayBuffer()        
-        
-    # lamda_loss_ID=5.0
-    # lamda_loss_G=1.0
-    # lamda_loss_cycle=10.0
     
     lambda_prune=0.001
 
@@ -665,22 +651,6 @@ for i in range(int(population/8)):
     caculate_fitness_for_first_time(mask_all_A2B[i*8+6],0,i*8+6,'A2B')
     caculate_fitness_for_first_time(mask_all_A2B[i*8+7],0,i*8+7,'A2B')
 
-    # process1=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8],0,i*8,'A2B'))
-    # process2=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+1],0,i*8+1,'A2B'))
-    # process3=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+2],0,i*8+2,'A2B'))
-    # process4=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+3],0,i*8+3,'A2B'))
-    # process5=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+4],0,i*8+4,'A2B'))
-    # process6=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+5],0,i*8+5,'A2B'))
-    # process7=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+6],0,i*8+6,'A2B'))
-    # process8=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+7],0,i*8+7,'A2B'))
-    # process1.start(); process2.start(); process3.start(); process4.start()
-    # process5.start(); process6.start(); process7.start(); process8.start()
-    # process1.join(); process2.join(); process3.join(); process4.join();
-    # process5.join(); process6.join(); process7.join(); process8.join();
-    
-endtime = datetime.datetime.now()
-print("The time is:")
-print((endtime - starttime).seconds)
 mask_best_A2B=mask_all_A2B[np.argmax(current_fitness_A2B)]
 best_fitness_A2B=max(current_fitness_A2B)
 ave_fitness_A2B=np.mean(current_fitness_A2B)
@@ -702,20 +672,6 @@ for i in range(int(population/8)):
     caculate_fitness_for_first_time(mask_all_A2B[i*8+6],0,i*8+6,'B2A')
     caculate_fitness_for_first_time(mask_all_A2B[i*8+7],0,i*8+7,'B2A')
 
-    # process1=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8],0,i*8,'B2A'))
-    # process2=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+1],1,i*8+1,'B2A'))
-    # process3=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+2],2,i*8+2,'B2A'))
-    # process4=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+3],3,i*8+3,'B2A'))
-    # process5=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+4],4,i*8+4,'B2A'))
-    # process6=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+5],5,i*8+5,'B2A'))
-    # process7=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+6],6,i*8+6,'B2A'))
-    # process8=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+7],7,i*8+7,'B2A'))
-    # process1.start(); process2.start(); process3.start(); process4.start()
-    # process5.start(); process6.start(); process7.start(); process8.start()        
-    # process1.join(); process2.join(); process3.join(); process4.join();        
-    # process5.join(); process6.join(); process7.join(); process8.join();
-
-#current_prob=calculate_prob(current_fitness)
 mask_best_B2A=mask_all_B2A[np.argmax(current_fitness_B2A)]
 best_fitness_B2A=max(current_fitness_B2A)
 ave_fitness_B2A=np.mean(current_fitness_B2A)
@@ -727,7 +683,11 @@ print('The best model channel num is:%d'%(sum(mask_best_B2A_full)))
 print('The ave fitness is: %4f'%(ave_fitness_B2A))
 np.savetxt('/cache/log/GA/B2A_%d_th.txt'%(0),mask_best_B2A)
 
-for j in range(max_generation):
+endtime = datetime.datetime.now()
+print("The time is:", endtime - starttime)
+
+for generation in range(max_generation):
+    print('Generation:', generation)
     mask_all_current_A2B=[]
     
     rest_population=population
@@ -773,32 +733,19 @@ for j in range(max_generation):
         caculate_fitness(mask_all_A2B[i*8+5],mask_best_B2A,0,i*8+5,'A2B')
         caculate_fitness(mask_all_A2B[i*8+6],mask_best_B2A,0,i*8+6,'A2B')
         caculate_fitness(mask_all_A2B[i*8+7],mask_best_B2A,0,i*8+7,'A2B')
-        
-        # process1=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8],mask_best_B2A,0,i*8,'A2B'))
-        # process2=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+1],mask_best_B2A,1,i*8+1,'A2B'))
-        # process3=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+2],mask_best_B2A,2,i*8+2,'A2B'))
-        # process4=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+3],mask_best_B2A,3,i*8+3,'A2B'))
-        # process5=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+4],mask_best_B2A,4,i*8+4,'A2B'))
-        # process6=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+5],mask_best_B2A,5,i*8+5,'A2B'))
-        # process7=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+6],mask_best_B2A,6,i*8+6,'A2B'))
-        # process8=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+7],mask_best_B2A,7,i*8+7,'A2B'))
-        # process1.start(); process2.start(); process3.start(); process4.start()
-        # process5.start(); process6.start(); process7.start(); process8.start()
-        # process1.join(); process2.join(); process3.join(); process4.join();
-        # process5.join(); process6.join(); process7.join(); process8.join();
     
     print('A2B')
     mask_best_A2B=mask_all_A2B[np.argmax(current_fitness_A2B)]
     mask_best_A2B_full=compute_layer_mask(mask_best_A2B,mask_chns)
     mask_best_A2B_full=[y for x in mask_best_A2B_full for y in x]
     mask_best_A2B_full=np.array(mask_best_A2B_full)
-    print('The %d th best model channel num is: %d'%(j,sum(mask_best_A2B_full)))
+    print('The %d th best model channel num is: %d'%(generation,sum(mask_best_A2B_full)))
     best_fitness_A2B=max(current_fitness_A2B)
-    print('The %d th best fitness is: %4f'%(j,best_fitness_A2B))
+    print('The %d th best fitness is: %4f'%(generation,best_fitness_A2B))
     ave_fitness_A2B=np.mean(current_fitness_A2B)
-    print('The %d th ave fitness is: %4f'%(j,ave_fitness_A2B))
+    print('The %d th ave fitness is: %4f'%(generation,ave_fitness_A2B))
         
-    np.savetxt('/cache/log/GA/A2B_%d_th.txt'%(j),mask_best_A2B)
+    np.savetxt('/cache/log/GA/A2B_%d_th.txt'%(generation),mask_best_A2B)
     
     mask_all_current_B2A=[]
     
@@ -844,29 +791,19 @@ for j in range(max_generation):
         caculate_fitness(mask_all_A2B[i*8+5],mask_best_B2A,0,i*8+5,'B2A')
         caculate_fitness(mask_all_A2B[i*8+6],mask_best_B2A,0,i*8+6,'B2A')
         caculate_fitness(mask_all_A2B[i*8+7],mask_best_B2A,0,i*8+7,'B2A')
-
-        # process1=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8],0,i*8,'B2A'))
-        # process2=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+1],1,i*8+1,'B2A'))
-        # process3=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+2],2,i*8+2,'B2A'))
-        # process4=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+3],3,i*8+3,'B2A'))
-        # process5=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+4],4,i*8+4,'B2A'))
-        # process6=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+5],5,i*8+5,'B2A'))
-        # process7=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+6],6,i*8+6,'B2A'))
-        # process8=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+7],7,i*8+7,'B2A'))
-        # process1.start(); process2.start(); process3.start(); process4.start()
-        # process5.start(); process6.start(); process7.start(); process8.start()
-        # process1.join(); process2.join(); process3.join(); process4.join();
-        # process5.join(); process6.join(); process7.join(); process8.join();
     
     mask_best_B2A=mask_all_B2A[np.argmax(current_fitness_B2A)]
     print('B2A')
     mask_best_B2A_full=compute_layer_mask(mask_best_B2A,mask_chns)
     mask_best_B2A_full=[y for x in mask_best_B2A_full for y in x]
     mask_best_B2A_full=np.array(mask_best_B2A_full)
-    print('The %d th best model channel num is: %d'%(j,sum(mask_best_B2A_full)))
+    print('The %d th best model channel num is: %d'%(generation,sum(mask_best_B2A_full)))
     best_fitness_B2A=max(current_fitness_B2A)
-    print('The %d th best fitness is: %4f'%(j,best_fitness_B2A))
+    print('The %d th best fitness is: %4f'%(generation,best_fitness_B2A))
     ave_fitness_B2A=np.mean(current_fitness_B2A)
-    print('The %d th ave fitness is: %4f'%(j,ave_fitness_B2A))
+    print('The %d th ave fitness is: %4f'%(generation,ave_fitness_B2A))
    
-    np.savetxt('/cache/log/GA/B2A_%d_th.txt'%(j),mask_best_B2A)
+    np.savetxt('/cache/log/GA/B2A_%d_th.txt'%(generation),mask_best_B2A)
+
+endtime = datetime.datetime.now()
+print("The time is:", endtime - starttime)
