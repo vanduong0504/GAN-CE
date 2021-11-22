@@ -3,6 +3,7 @@ import torch.multiprocessing as mp
 import os
 # import sys
 import torch
+
 from torch.utils.data import dataloader
 # from torch.multiprocessing import reductions
 from multiprocessing.reduction import ForkingPickler
@@ -58,7 +59,7 @@ parser.add_argument('--num_gpu', type=int, default=8, help='num_gpu')
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
 parser.add_argument('--n_epochs', type=int, default=10, help='number of epochs of training')
 parser.add_argument('--batchSize', type=int, default=1, help='size of the batches')
-parser.add_argument('--dataroot', type=str, default='/cache/data/horse2zebra', help='root directory of the dataset')
+parser.add_argument('--dataroot', type=str, default='database/horse2zebra', help='root directory of the dataset')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
 parser.add_argument('--size', type=int, default=256, help='size of the data crop (squared assumed)')
@@ -156,6 +157,7 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
             if cfg_id<len(cfg_mask):
                 end_mask=cfg_mask[cfg_id]
             continue
+        
         elif isinstance(m,nn.ConvTranspose2d):
        
             mask=np.ones(m.weight.data.shape)

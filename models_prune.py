@@ -66,14 +66,12 @@ class Generator_Prune(nn.Module):
         
         in_features= int(sum(cfg_mask[2]))
      
-
         # Residual blocks
         for _ in range(n_residual_blocks):
             model += [ResidualBlock(in_features)]
 
         # Upsampling
         out_features = int(sum(cfg_mask[21]))
-        
         
         model += [  nn.ConvTranspose2d(in_features, out_features, 3, stride=2, padding=1, output_padding=1),
                         nn.InstanceNorm2d(out_features),
