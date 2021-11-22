@@ -44,16 +44,16 @@ from datasets import ImageDataset
 from GA import *
 
 #copy dataset and pretrained model to training environment
-import moxing as mox
-mox.file.copy_parallel("s3://data/horse2zebra_train_val_test","/cache/data/horse2zebra")
-mox.file.copy("s3://models/CycleGAN/horse2zebra/netG_A2B_200.pth","/cache/models/netG_A2B.pth")
-mox.file.copy("s3://models/CycleGAN/horse2zebra/netG_B2A_200.pth","/cache/models/netG_B2A.pth")
-mox.file.copy("s3://models/CycleGAN/horse2zebra/netD_A_200.pth","/cache/models/output/netD_A.pth")
-mox.file.copy("s3://models/CycleGAN/horse2zebra/netD_B_200.pth","/cache/models/output/netD_B.pth")
+# import moxing as mox
+# mox.file.copy_parallel("s3://data/horse2zebra_train_val_test","/cache/data/horse2zebra")
+# mox.file.copy("s3://models/CycleGAN/horse2zebra/netG_A2B_200.pth","/cache/models/netG_A2B.pth")
+# mox.file.copy("s3://models/CycleGAN/horse2zebra/netG_B2A_200.pth","/cache/models/netG_B2A.pth")
+# mox.file.copy("s3://models/CycleGAN/horse2zebra/netD_A_200.pth","/cache/models/output/netD_A.pth")
+# mox.file.copy("s3://models/CycleGAN/horse2zebra/netD_B_200.pth","/cache/models/output/netD_B.pth")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data_url', type=str, default='', help='root directory of the dataset')
-parser.add_argument('--train_url', type=str, default='', help='root directory of the dataset')
+# parser.add_argument('--data_url', type=str, default='', help='root directory of the dataset')
+# parser.add_argument('--train_url', type=str, default='', help='root directory of the dataset')
 parser.add_argument('--num_gpu', type=int, default=8, help='num_gpu')
 
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
@@ -61,12 +61,12 @@ parser.add_argument('--n_epochs', type=int, default=10, help='number of epochs o
 parser.add_argument('--batchSize', type=int, default=1, help='size of the batches')
 parser.add_argument('--dataroot', type=str, default='database/horse2zebra', help='root directory of the dataset')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
-parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
+# parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
 parser.add_argument('--size', type=int, default=256, help='size of the data crop (squared assumed)')
 parser.add_argument('--input_nc', type=int, default=3, help='number of channels of input data')
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
 parser.add_argument('--cuda',type=bool, default=True, help='use GPU computation')
-parser.add_argument('--n_cpu', type=int, default=16, help='number of cpu threads to use during batch generation')
+# parser.add_argument('--n_cpu', type=int, default=16, help='number of cpu threads to use during batch generation')
 opt = parser.parse_args()
 
 population=32
@@ -425,7 +425,7 @@ def caculate_fitness(mask_input_A2B,mask_input_B2A,gpu_id,fitness_id,A2B_or_B2A)
             end_mask=cfg_mask_B2A[cfg_id]
             continue        
          
-     # Dataset loader
+    # Dataset loader
     Tensor = torch.cuda.FloatTensor if opt.cuda else torch.Tensor
     input_A = Tensor(opt.batchSize, opt.input_nc, opt.size, opt.size)
     input_B = Tensor(opt.batchSize, opt.output_nc, opt.size, opt.size)
@@ -653,19 +653,27 @@ for i in range(population):
 starttime = datetime.datetime.now()
 
 for i in range(int(population/8)):
+    caculate_fitness_for_first_time(mask_all_A2B[i*8],0,i*8,'A2B')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+1],0,i*8+1,'A2B')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+2],0,i*8+2,'A2B')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+3],0,i*8+3,'A2B')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+4],0,i*8+4,'A2B')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+5],0,i*8+5,'A2B')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+6],0,i*8+6,'A2B')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+7],0,i*8+7,'A2B')
 
-    process1=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8],0,i*8,'A2B'))
-    process2=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+1],1,i*8+1,'A2B'))
-    process3=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+2],2,i*8+2,'A2B'))
-    process4=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+3],3,i*8+3,'A2B'))
-    process5=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+4],4,i*8+4,'A2B'))
-    process6=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+5],5,i*8+5,'A2B'))
-    process7=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+6],6,i*8+6,'A2B'))
-    process8=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+7],7,i*8+7,'A2B'))
-    process1.start(); process2.start(); process3.start(); process4.start()
-    process5.start(); process6.start(); process7.start(); process8.start()
-    process1.join(); process2.join(); process3.join(); process4.join();
-    process5.join(); process6.join(); process7.join(); process8.join();
+    # process1=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8],0,i*8,'A2B'))
+    # process2=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+1],1,i*8+1,'A2B'))
+    # process3=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+2],2,i*8+2,'A2B'))
+    # process4=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+3],3,i*8+3,'A2B'))
+    # process5=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+4],4,i*8+4,'A2B'))
+    # process6=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+5],5,i*8+5,'A2B'))
+    # process7=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+6],6,i*8+6,'A2B'))
+    # process8=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+7],7,i*8+7,'A2B'))
+    # process1.start(); process2.start(); process3.start(); process4.start()
+    # process5.start(); process6.start(); process7.start(); process8.start()
+    # process1.join(); process2.join(); process3.join(); process4.join();
+    # process5.join(); process6.join(); process7.join(); process8.join();
     
 endtime = datetime.datetime.now()
 print("The time is:")
@@ -682,19 +690,27 @@ print('The ave fitness is: %4f'%(ave_fitness_A2B))
 np.savetxt('/cache/log/GA/A2B_%d_th.txt'%(0),mask_best_A2B)
 
 for i in range(int(population/8)):
+    caculate_fitness_for_first_time(mask_all_A2B[i*8],0,i*8,'B2A')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+1],0,i*8+1,'B2A')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+2],0,i*8+2,'B2A')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+3],0,i*8+3,'B2A')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+4],0,i*8+4,'B2A')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+5],0,i*8+5,'B2A')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+6],0,i*8+6,'B2A')
+    caculate_fitness_for_first_time(mask_all_A2B[i*8+7],0,i*8+7,'B2A')
 
-    process1=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8],0,i*8,'B2A'))
-    process2=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+1],1,i*8+1,'B2A'))
-    process3=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+2],2,i*8+2,'B2A'))
-    process4=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+3],3,i*8+3,'B2A'))
-    process5=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+4],4,i*8+4,'B2A'))
-    process6=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+5],5,i*8+5,'B2A'))
-    process7=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+6],6,i*8+6,'B2A'))
-    process8=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+7],7,i*8+7,'B2A'))
-    process1.start(); process2.start(); process3.start(); process4.start()
-    process5.start(); process6.start(); process7.start(); process8.start()        
-    process1.join(); process2.join(); process3.join(); process4.join();        
-    process5.join(); process6.join(); process7.join(); process8.join();
+    # process1=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8],0,i*8,'B2A'))
+    # process2=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+1],1,i*8+1,'B2A'))
+    # process3=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+2],2,i*8+2,'B2A'))
+    # process4=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+3],3,i*8+3,'B2A'))
+    # process5=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+4],4,i*8+4,'B2A'))
+    # process6=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+5],5,i*8+5,'B2A'))
+    # process7=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+6],6,i*8+6,'B2A'))
+    # process8=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_B2A[i*8+7],7,i*8+7,'B2A'))
+    # process1.start(); process2.start(); process3.start(); process4.start()
+    # process5.start(); process6.start(); process7.start(); process8.start()        
+    # process1.join(); process2.join(); process3.join(); process4.join();        
+    # process5.join(); process6.join(); process7.join(); process8.join();
 
 #current_prob=calculate_prob(current_fitness)
 mask_best_B2A=mask_all_B2A[np.argmax(current_fitness_B2A)]
@@ -746,19 +762,27 @@ for j in range(max_generation):
     mask_all_A2B= mask_all_current_A2B
     
     for i in range(int(population/8)):
-
-        process1=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8],mask_best_B2A,0,i*8,'A2B'))
-        process2=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+1],mask_best_B2A,1,i*8+1,'A2B'))
-        process3=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+2],mask_best_B2A,2,i*8+2,'A2B'))
-        process4=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+3],mask_best_B2A,3,i*8+3,'A2B'))
-        process5=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+4],mask_best_B2A,4,i*8+4,'A2B'))
-        process6=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+5],mask_best_B2A,5,i*8+5,'A2B'))
-        process7=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+6],mask_best_B2A,6,i*8+6,'A2B'))
-        process8=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+7],mask_best_B2A,7,i*8+7,'A2B'))
-        process1.start(); process2.start(); process3.start(); process4.start()
-        process5.start(); process6.start(); process7.start(); process8.start()
-        process1.join(); process2.join(); process3.join(); process4.join();
-        process5.join(); process6.join(); process7.join(); process8.join();
+        caculate_fitness(mask_all_A2B[i*8],mask_best_B2A,0,i*8,'A2B')
+        caculate_fitness(mask_all_A2B[i*8+1],mask_best_B2A,0,i*8+1,'A2B')
+        caculate_fitness(mask_all_A2B[i*8+2],mask_best_B2A,0,i*8+2,'A2B')
+        caculate_fitness(mask_all_A2B[i*8+3],mask_best_B2A,0,i*8+3,'A2B')
+        caculate_fitness(mask_all_A2B[i*8+4],mask_best_B2A,0,i*8+4,'A2B')
+        caculate_fitness(mask_all_A2B[i*8+5],mask_best_B2A,0,i*8+5,'A2B')
+        caculate_fitness(mask_all_A2B[i*8+6],mask_best_B2A,0,i*8+6,'A2B')
+        caculate_fitness(mask_all_A2B[i*8+7],mask_best_B2A,0,i*8+7,'A2B')
+        
+        # process1=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8],mask_best_B2A,0,i*8,'A2B'))
+        # process2=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+1],mask_best_B2A,1,i*8+1,'A2B'))
+        # process3=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+2],mask_best_B2A,2,i*8+2,'A2B'))
+        # process4=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+3],mask_best_B2A,3,i*8+3,'A2B'))
+        # process5=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+4],mask_best_B2A,4,i*8+4,'A2B'))
+        # process6=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+5],mask_best_B2A,5,i*8+5,'A2B'))
+        # process7=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+6],mask_best_B2A,6,i*8+6,'A2B'))
+        # process8=mp.Process(target=caculate_fitness,args=(mask_all_A2B[i*8+7],mask_best_B2A,7,i*8+7,'A2B'))
+        # process1.start(); process2.start(); process3.start(); process4.start()
+        # process5.start(); process6.start(); process7.start(); process8.start()
+        # process1.join(); process2.join(); process3.join(); process4.join();
+        # process5.join(); process6.join(); process7.join(); process8.join();
     
     print('A2B')
     mask_best_A2B=mask_all_A2B[np.argmax(current_fitness_A2B)]
@@ -809,19 +833,27 @@ for j in range(max_generation):
     mask_all_B2A= mask_all_current_B2A
 
     for i in range(int(population/8)):
+        caculate_fitness(mask_all_A2B[i*8],mask_best_B2A,0,i*8,'B2A')
+        caculate_fitness(mask_all_A2B[i*8+1],mask_best_B2A,0,i*8+1,'B2A')
+        caculate_fitness(mask_all_A2B[i*8+2],mask_best_B2A,0,i*8+2,'B2A')
+        caculate_fitness(mask_all_A2B[i*8+3],mask_best_B2A,0,i*8+3,'B2A')
+        caculate_fitness(mask_all_A2B[i*8+4],mask_best_B2A,0,i*8+4,'B2A')
+        caculate_fitness(mask_all_A2B[i*8+5],mask_best_B2A,0,i*8+5,'B2A')
+        caculate_fitness(mask_all_A2B[i*8+6],mask_best_B2A,0,i*8+6,'B2A')
+        caculate_fitness(mask_all_A2B[i*8+7],mask_best_B2A,0,i*8+7,'B2A')
 
-        process1=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8],0,i*8,'B2A'))
-        process2=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+1],1,i*8+1,'B2A'))
-        process3=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+2],2,i*8+2,'B2A'))
-        process4=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+3],3,i*8+3,'B2A'))
-        process5=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+4],4,i*8+4,'B2A'))
-        process6=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+5],5,i*8+5,'B2A'))
-        process7=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+6],6,i*8+6,'B2A'))
-        process8=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+7],7,i*8+7,'B2A'))
-        process1.start(); process2.start(); process3.start(); process4.start()
-        process5.start(); process6.start(); process7.start(); process8.start()
-        process1.join(); process2.join(); process3.join(); process4.join();
-        process5.join(); process6.join(); process7.join(); process8.join();
+        # process1=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8],0,i*8,'B2A'))
+        # process2=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+1],1,i*8+1,'B2A'))
+        # process3=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+2],2,i*8+2,'B2A'))
+        # process4=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+3],3,i*8+3,'B2A'))
+        # process5=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+4],4,i*8+4,'B2A'))
+        # process6=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+5],5,i*8+5,'B2A'))
+        # process7=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+6],6,i*8+6,'B2A'))
+        # process8=mp.Process(target=caculate_fitness,args=(mask_best_A2B,mask_all_B2A[i*8+7],7,i*8+7,'B2A'))
+        # process1.start(); process2.start(); process3.start(); process4.start()
+        # process5.start(); process6.start(); process7.start(); process8.start()
+        # process1.join(); process2.join(); process3.join(); process4.join();
+        # process5.join(); process6.join(); process7.join(); process8.join();
     
     mask_best_B2A=mask_all_B2A[np.argmax(current_fitness_B2A)]
     print('B2A')
