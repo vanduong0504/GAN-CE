@@ -1,4 +1,4 @@
-Forked from [GAN-Prunin](https://github.com/yehuitang/Pruning/tree/master/GAN-Pruning)
+Forked from [GAN-Pruning](https://github.com/yehuitang/Pruning/tree/master/GAN-Pruning)
 
 ### Files description
 
@@ -8,4 +8,3 @@ Forked from [GAN-Prunin](https://github.com/yehuitang/Pruning/tree/master/GAN-Pr
 - `models.py` defines original architecture of generators and discriminators.
 - `models_prune.py` defines searched pruned architecture with binary channel mask.
 - `GA.py` defines evolutionary operations .
-- 
