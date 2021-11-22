@@ -43,17 +43,7 @@ from utils import ReplayBuffer
 from datasets import ImageDataset
 from GA import *
 
-#copy dataset and pretrained model to training environment
-# import moxing as mox
-# mox.file.copy_parallel("s3://data/horse2zebra_train_val_test","/cache/data/horse2zebra")
-# mox.file.copy("s3://models/CycleGAN/horse2zebra/netG_A2B_200.pth","/cache/models/netG_A2B.pth")
-# mox.file.copy("s3://models/CycleGAN/horse2zebra/netG_B2A_200.pth","/cache/models/netG_B2A.pth")
-# mox.file.copy("s3://models/CycleGAN/horse2zebra/netD_A_200.pth","/cache/models/output/netD_A.pth")
-# mox.file.copy("s3://models/CycleGAN/horse2zebra/netD_B_200.pth","/cache/models/output/netD_B.pth")
-
 parser = argparse.ArgumentParser()
-# parser.add_argument('--data_url', type=str, default='', help='root directory of the dataset')
-# parser.add_argument('--train_url', type=str, default='', help='root directory of the dataset')
 parser.add_argument('--num_gpu', type=int, default=8, help='num_gpu')
 
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
@@ -66,7 +56,13 @@ parser.add_argument('--size', type=int, default=256, help='size of the data crop
 parser.add_argument('--input_nc', type=int, default=3, help='number of channels of input data')
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
 parser.add_argument('--cuda',type=bool, default=True, help='use GPU computation')
+parser.add_argument('--mode',type=str, default='test', help='select mode_folder[train/test/val]')
 # parser.add_argument('--n_cpu', type=int, default=16, help='number of cpu threads to use during batch generation')
+parser.add_argument('--G_A_path',type=str, required=True)
+parser.add_argument('--G_B_path',type=str, required=True)
+parser.add_argument('--D_A_path',type=str, required=True)
+parser.add_argument('--D_B_path',type=str, required=True)
+
 opt = parser.parse_args()
 
 population=32
@@ -91,9 +87,9 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
         netD_B.cuda(gpu_id)
         model = Generator(opt.input_nc, opt.output_nc)
         model.cuda(gpu_id)
-        netG_A2B.load_state_dict(torch.load('/cache/models/netG_A2B.pth'))
-        netD_B.load_state_dict(torch.load('/cache/models/netD_B.pth'))
-        model.load_state_dict(torch.load('/cache/models/netG_A2B.pth'))
+        netG_A2B.load_state_dict(torch.load(opt.G_A_path))
+        netD_B.load_state_dict(torch.load(opt.D_B_path))
+        model.load_state_dict(torch.load(opt.G_A_path))
         model.eval()
         netD_B.eval()
         netG_A2B.eval()
@@ -105,16 +101,16 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
         netD_A.cuda(gpu_id)
         model = Generator(opt.input_nc, opt.output_nc)
         model.cuda(gpu_id)
-        netG_B2A.load_state_dict(torch.load('/cache/models/netG_B2A.pth'))
-        netD_A.load_state_dict(torch.load('/cache/models/netD_A.pth'))
-        model.load_state_dict(torch.load('/cache/models/netG_B2A.pth'))
+        netG_B2A.load_state_dict(torch.load(opt.G_B_path))
+        netD_A.load_state_dict(torch.load(opt.D_A_path))
+        model.load_state_dict(torch.load(opt.G_B_path))
         model.eval()
         netD_A.eval()
         netG_B2A.eval()
         
     criterion_GAN = torch.nn.MSELoss()
-    criterion_cycle = torch.nn.L1Loss()
-    criterion_identity = torch.nn.L1Loss()
+    # criterion_cycle = torch.nn.L1Loss()
+    # criterion_identity = torch.nn.L1Loss()
     fitness=0   
     cfg_mask=compute_layer_mask(mask_input,mask_chns)
     cfg_full_mask=[y for x in cfg_mask for y in x]
@@ -191,14 +187,15 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
     Tensor = torch.cuda.FloatTensor if opt.cuda else torch.Tensor
     input_A = Tensor(opt.batchSize, opt.input_nc, opt.size, opt.size)
     input_B = Tensor(opt.batchSize, opt.output_nc, opt.size, opt.size)
-    target_real = Variable(Tensor(opt.batchSize).fill_(1.0), requires_grad=False)
-    target_fake = Variable(Tensor(opt.batchSize).fill_(0.0), requires_grad=False)
-    fake_A_buffer = ReplayBuffer()
-    fake_B_buffer = ReplayBuffer()        
+    # target_real = Variable(Tensor(opt.batchSize).fill_(1.0), requires_grad=False)
+    # target_fake = Variable(Tensor(opt.batchSize).fill_(0.0), requires_grad=False)
+    # fake_A_buffer = ReplayBuffer()
+    # fake_B_buffer = ReplayBuffer()        
         
-    lamda_loss_ID=5.0
-    lamda_loss_G=1.0
-    lamda_loss_cycle=10.0
+    # lamda_loss_ID=5.0
+    # lamda_loss_G=1.0
+    # lamda_loss_cycle=10.0
+    
     lambda_prune=0.001
 
     with torch.no_grad():
@@ -206,9 +203,9 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
         transforms_ = [ transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
     
-        dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, mode='val'), 
+        dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, mode=opt.mode), 
                         batch_size=opt.batchSize, shuffle=False, drop_last=True)
-                  
+                 
         Loss_resemble_G=0
         if A2B_or_B2A=='A2B':
             for i, batch in enumerate(dataloader):
@@ -225,11 +222,12 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
                 pred_fake_full=netD_B(fake_B_full_model.detach())
     
                 loss_D_fake = criterion_GAN(pred_fake.detach(),pred_fake_full.detach())
-                Loss_resemble_G=Loss_resemble_G+loss_D_fake 
+                Loss_resemble_G += loss_D_fake 
                 
             fitness = 500/Loss_resemble_G.detach() + sum(np.ones(cfg_full_mask.shape)-cfg_full_mask)*lambda_prune
             print("A2B first generation")
             print("GPU_ID is %d"%(gpu_id))
+            print("POP_id is %d"%(fitness_id))
             print("channel num is: %d"%(sum(cfg_full_mask)))    
             print("Loss_resemble_G is %f prune_loss is %f "%(500/Loss_resemble_G,sum(np.ones(cfg_full_mask.shape)-cfg_full_mask)))
             print("fitness is %f \n"%(fitness))
@@ -249,11 +247,12 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
                 pred_fake_full=netD_A(fake_A_full_model.detach())
 
                 loss_D_fake = criterion_GAN(pred_fake.detach(),pred_fake_full.detach())
-                Loss_resemble_G=Loss_resemble_G+loss_D_fake        
+                Loss_resemble_G += loss_D_fake        
        
             fitness = 500/Loss_resemble_G.detach() + sum(np.ones(cfg_full_mask.shape)-cfg_full_mask)*lambda_prune
             print("B2A first generation")
             print("GPU_ID is %d"%(gpu_id))
+            print("POP_id is %d"%(fitness_id))
             print("channel num is: %d"%(sum(cfg_full_mask)))    
             print("Loss_resemble_G is %f prune_loss is %f "%(500/Loss_resemble_G,sum(np.ones(cfg_full_mask.shape)-cfg_full_mask)))
             print("fitness is %f \n"%(fitness))
@@ -275,10 +274,10 @@ def caculate_fitness(mask_input_A2B,mask_input_B2A,gpu_id,fitness_id,A2B_or_B2A)
     model_A2B.cuda(gpu_id)
     model_B2A.cuda(gpu_id)
 
-    model_A2B.load_state_dict(torch.load('/cache/models/netG_A2B.pth'))
-    model_B2A.load_state_dict(torch.load('/cache/models/netG_B2A.pth'))                         
-    netD_A.load_state_dict(torch.load('/cache/models/netD_A.pth'))
-    netD_B.load_state_dict(torch.load('/cache/models/netD_B.pth'))
+    model_A2B.load_state_dict(torch.load(opt.G_A_path))
+    model_B2A.load_state_dict(torch.load(opt.G_B_path))                         
+    netD_A.load_state_dict(torch.load(opt.D_A_path))
+    netD_B.load_state_dict(torch.load(opt.D_B_path))
 
     # Lossess
     criterion_GAN = torch.nn.MSELoss()
@@ -447,7 +446,8 @@ def caculate_fitness(mask_input_A2B,mask_input_B2A,gpu_id,fitness_id,A2B_or_B2A)
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
     
-    dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True,mode='train'), batch_size=opt.batchSize, shuffle=True,drop_last=True)
+    dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True, mode=opt.mode), 
+                                batch_size=opt.batchSize, shuffle=True,drop_last=True)
     
     for epoch in range(opt.epoch, opt.n_epochs):
         for i, batch in enumerate(dataloader):
@@ -546,8 +546,8 @@ def caculate_fitness(mask_input_A2B,mask_input_B2A,gpu_id,fitness_id,A2B_or_B2A)
             netD_B.eval()
             netG_A2B.eval()
     
-            netD_B.load_state_dict(torch.load('/cache/models/netD_B.pth'))        
-            netG_A2B.load_state_dict(torch.load('/cache/models/netG_A2B.pth'))
+            netD_B.load_state_dict(torch.load(opt.D_B_path))        
+            netG_A2B.load_state_dict(torch.load(opt.G_A_path))
 
             for i, batch in enumerate(dataloader):
 
@@ -571,6 +571,7 @@ def caculate_fitness(mask_input_A2B,mask_input_B2A,gpu_id,fitness_id,A2B_or_B2A)
         
             print('A2B')
             print("GPU_ID is %d"%(gpu_id))
+            print("POP_id is %d"%(fitness_id))
             print("channel num is: %d"%(sum(cfg_full_mask_A2B)))    
             print("Loss_resemble_G is %f prune_loss is %f "%(500/Loss_resemble_G,sum(np.ones(cfg_full_mask_A2B.shape)-cfg_full_mask_A2B)))
             print("fitness is %f \n"%(fitness))
@@ -588,8 +589,8 @@ def caculate_fitness(mask_input_A2B,mask_input_B2A,gpu_id,fitness_id,A2B_or_B2A)
             netD_A.eval()
             netG_B2A.eval()
     
-            netD_A.load_state_dict(torch.load('/cache/models/netD_A.pth'))        
-            netG_B2A.load_state_dict(torch.load('/cache/models/netG_B2A.pth'))
+            netD_A.load_state_dict(torch.load(opt.D_A_path))        
+            netG_B2A.load_state_dict(torch.load(opt.G_B_path))
 
             for i, batch in enumerate(dataloader):
 
@@ -613,12 +614,13 @@ def caculate_fitness(mask_input_A2B,mask_input_B2A,gpu_id,fitness_id,A2B_or_B2A)
                  
             print('B2A')
             print("GPU_ID is %d"%(gpu_id))
+            print("POP_id is %d"%(fitness_id))
             print("channel num is: %d"%(sum(cfg_full_mask_B2A)))    
             print("Loss_resemble_G is %f prune_loss is %f "%(500/Loss_resemble_G,sum(np.ones(cfg_full_mask_B2A.shape)-cfg_full_mask_B2A)))
             print("fitness is %f \n"%(fitness))
 
             current_fitness_B2A[fitness_id]= fitness.item()
-    
+
 max_generation=50
 layer_id = 0
 cfg = []
@@ -638,6 +640,7 @@ for mask_chn in mask_chns:
 s1=0.2 #prob for selection
 s2=0.7 #prob for crossover
 s3=0.1 #prob for mutation
+
 print("A new start training")
 
 if os.path.exists('/cache/log/GA')==False:
@@ -663,13 +666,13 @@ for i in range(int(population/8)):
     caculate_fitness_for_first_time(mask_all_A2B[i*8+7],0,i*8+7,'A2B')
 
     # process1=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8],0,i*8,'A2B'))
-    # process2=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+1],1,i*8+1,'A2B'))
-    # process3=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+2],2,i*8+2,'A2B'))
-    # process4=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+3],3,i*8+3,'A2B'))
-    # process5=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+4],4,i*8+4,'A2B'))
-    # process6=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+5],5,i*8+5,'A2B'))
-    # process7=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+6],6,i*8+6,'A2B'))
-    # process8=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+7],7,i*8+7,'A2B'))
+    # process2=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+1],0,i*8+1,'A2B'))
+    # process3=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+2],0,i*8+2,'A2B'))
+    # process4=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+3],0,i*8+3,'A2B'))
+    # process5=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+4],0,i*8+4,'A2B'))
+    # process6=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+5],0,i*8+5,'A2B'))
+    # process7=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+6],0,i*8+6,'A2B'))
+    # process8=mp.Process(target=caculate_fitness_for_first_time,args=(mask_all_A2B[i*8+7],0,i*8+7,'A2B'))
     # process1.start(); process2.start(); process3.start(); process4.start()
     # process5.start(); process6.start(); process7.start(); process8.start()
     # process1.join(); process2.join(); process3.join(); process4.join();

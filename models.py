@@ -9,6 +9,7 @@ class ResidualBlock(nn.Module):
                         nn.Conv2d(in_features, in_features, 3),
                         nn.InstanceNorm2d(in_features),
                         nn.ReLU(inplace=True),
+                        nn.Dropout(0),
                         nn.ReflectionPad2d(1),
                         nn.Conv2d(in_features, in_features, 3),
                         nn.InstanceNorm2d(in_features)  ]
