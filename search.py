@@ -210,12 +210,12 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
                 loss_D_fake = criterion_GAN(pred_fake.detach(),pred_fake_full.detach())
                 Loss_resemble_G += loss_D_fake 
                 
-            fitness = 500/Loss_resemble_G.detach() + sum(np.ones(cfg_full_mask.shape)-cfg_full_mask)*lambda_prune
+            fitness = Loss_resemble_G.detach()*lambda_prune + 500/(sum(np.ones(cfg_full_mask.shape)/cfg_full_mask))
             print("A2B first generation")
             print("GPU_ID is %d"%(gpu_id))
             print("POP_id is %d"%(fitness_id))
             print("channel num is: %d"%(sum(cfg_full_mask)))    
-            print("Loss_resemble_G is %f prune_loss is %f "%(500/Loss_resemble_G,sum(np.ones(cfg_full_mask.shape)-cfg_full_mask)))
+            print("Loss_resemble_G is %f prune_loss is %f "%(Loss_resemble_G*lambda_prune, 500/(sum(np.ones(cfg_full_mask.shape)/cfg_full_mask))))
             print("fitness is %f \n"%(fitness))
     
             current_fitness_A2B[fitness_id]= fitness.item()
@@ -235,12 +235,12 @@ def caculate_fitness_for_first_time(mask_input,gpu_id,fitness_id,A2B_or_B2A):
                 loss_D_fake = criterion_GAN(pred_fake.detach(),pred_fake_full.detach())
                 Loss_resemble_G += loss_D_fake        
        
-            fitness = 500/Loss_resemble_G.detach() + sum(np.ones(cfg_full_mask.shape)-cfg_full_mask)*lambda_prune
+            fitness = Loss_resemble_G.detach()*lambda_prune + 500/(sum(np.ones(cfg_full_mask.shape)/cfg_full_mask))
             print("B2A first generation")
             print("GPU_ID is %d"%(gpu_id))
             print("POP_id is %d"%(fitness_id))
             print("channel num is: %d"%(sum(cfg_full_mask)))    
-            print("Loss_resemble_G is %f prune_loss is %f "%(500/Loss_resemble_G,sum(np.ones(cfg_full_mask.shape)-cfg_full_mask)))
+            print("Loss_resemble_G is %f prune_loss is %f "%(Loss_resemble_G*lambda_prune, 500/(sum(np.ones(cfg_full_mask.shape)/cfg_full_mask))))
             print("fitness is %f \n"%(fitness))
 
             current_fitness_B2A[fitness_id]= fitness.item()
@@ -553,13 +553,13 @@ def caculate_fitness(mask_input_A2B,mask_input_B2A,gpu_id,fitness_id,A2B_or_B2A)
                 
                 lambda_prune=0.001
        
-            fitness = 500/Loss_resemble_G.detach() + sum(np.ones(cfg_full_mask_A2B.shape)-cfg_full_mask_A2B)*lambda_prune
-        
+            fitness = Loss_resemble_G.detach()*lambda_prune + 500/(sum(np.ones(cfg_full_mask_A2B.shape)/cfg_full_mask_A2B))
+            
             print('A2B')
             print("GPU_ID is %d"%(gpu_id))
             print("POP_id is %d"%(fitness_id))
             print("channel num is: %d"%(sum(cfg_full_mask_A2B)))    
-            print("Loss_resemble_G is %f prune_loss is %f "%(500/Loss_resemble_G,sum(np.ones(cfg_full_mask_A2B.shape)-cfg_full_mask_A2B)))
+            print("Loss_resemble_G is %f prune_loss is %f "%(Loss_resemble_G*lambda_prune, 500/(sum(np.ones(cfg_full_mask_A2B.shape)/cfg_full_mask_A2B))))
             print("fitness is %f \n"%(fitness))
     
             current_fitness_A2B[fitness_id]= fitness.item()
@@ -596,13 +596,13 @@ def caculate_fitness(mask_input_A2B,mask_input_B2A,gpu_id,fitness_id,A2B_or_B2A)
     
                 lambda_prune=0.001
        
-            fitness = 500/Loss_resemble_G.detach() + sum(np.ones(cfg_full_mask_B2A.shape)-cfg_full_mask_B2A)*lambda_prune
+            fitness = Loss_resemble_G.detach()*lambda_prune + 500/(sum(np.ones(cfg_full_mask_B2A.shape)/cfg_full_mask_B2A))
                  
             print('B2A')
             print("GPU_ID is %d"%(gpu_id))
             print("POP_id is %d"%(fitness_id))
             print("channel num is: %d"%(sum(cfg_full_mask_B2A)))    
-            print("Loss_resemble_G is %f prune_loss is %f "%(500/Loss_resemble_G,sum(np.ones(cfg_full_mask_B2A.shape)-cfg_full_mask_B2A)))
+            print("Loss_resemble_G is %f prune_loss is %f "%(Loss_resemble_G*lambda_prune, 500/(sum(np.ones(cfg_full_mask_B2A.shape)/cfg_full_mask_B2A))))
             print("fitness is %f \n"%(fitness))
 
             current_fitness_B2A[fitness_id]= fitness.item()
@@ -613,43 +613,34 @@ cfg = []
 cfg_mask = []
 #construct mask
 first_conv_out=64
-mask_chns=[]
+mask_chns=[] # [64,128, 256, 128, 64]
 mask_chns.append(first_conv_out) #1st conv
 mask_chns.append(first_conv_out*2) #2nd conv
 mask_chns.append(first_conv_out*4) #3rd conv 1~9 res_block
 mask_chns.append(first_conv_out*2) #1st trans_conv
 mask_chns.append(first_conv_out) #2nd trans_conv
-bit_len=0
+bit_len=0 
 for mask_chn in mask_chns:
-    bit_len+= mask_chn
+    bit_len+= mask_chn #640
 
-s1=0.2 #prob for selection
-s2=0.7 #prob for crossover
-s3=0.1 #prob for mutation
+prob_select=0.2 #prob for selection
+prob_cross=0.7 #prob for crossover
+prob_mutate=0.1 #prob for mutation
 
 print("A new start training")
 
 if os.path.exists('/cache/log/GA')==False:
     os.makedirs('/cache/log/GA')
 
-mask_all_A2B=[]
+mask_all_A2B, mask_all_B2A= [], []
 for i in range(population):
     mask_all_A2B.append(np.random.randint(2,size=bit_len))
-mask_all_B2A=[]
-for i in range(population):
-    mask_all_B2A.append(np.random.randint(2,size=bit_len))    
-
+    mask_all_B2A.append(np.random.randint(2,size=bit_len))
+    
 starttime = datetime.datetime.now()
 
-for i in range(int(population/8)):
-    caculate_fitness_for_first_time(mask_all_A2B[i*8],0,i*8,'A2B')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+1],0,i*8+1,'A2B')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+2],0,i*8+2,'A2B')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+3],0,i*8+3,'A2B')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+4],0,i*8+4,'A2B')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+5],0,i*8+5,'A2B')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+6],0,i*8+6,'A2B')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+7],0,i*8+7,'A2B')
+for i in range(population):
+    caculate_fitness_for_first_time(mask_all_A2B[i],0,i,'A2B')
 
 mask_best_A2B=mask_all_A2B[np.argmax(current_fitness_A2B)]
 best_fitness_A2B=max(current_fitness_A2B)
@@ -662,15 +653,8 @@ print('The best model channel num is:%d'%(sum(mask_best_A2B_full)))
 print('The ave fitness is: %4f'%(ave_fitness_A2B))
 np.savetxt('/cache/log/GA/A2B_%d_th.txt'%(0),mask_best_A2B)
 
-for i in range(int(population/8)):
-    caculate_fitness_for_first_time(mask_all_A2B[i*8],0,i*8,'B2A')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+1],0,i*8+1,'B2A')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+2],0,i*8+2,'B2A')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+3],0,i*8+3,'B2A')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+4],0,i*8+4,'B2A')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+5],0,i*8+5,'B2A')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+6],0,i*8+6,'B2A')
-    caculate_fitness_for_first_time(mask_all_A2B[i*8+7],0,i*8+7,'B2A')
+for i in range(population):
+    caculate_fitness_for_first_time(mask_all_B2A[i],0,i,'B2A')
 
 mask_best_B2A=mask_all_B2A[np.argmax(current_fitness_B2A)]
 best_fitness_B2A=max(current_fitness_B2A)
@@ -697,15 +681,15 @@ for generation in range(max_generation):
     while(rest_population>0):
 
         s=np.random.uniform(0,1)
-        #selection
-        if s<s1:
-            mask_,_=roulette(mask_all_A2B,population,current_fitness_A2B)
+        #selection: chose best individual with maxium fitness
+        if s<prob_select:
+            mask_ = selection(mask_all_A2B,population,current_fitness_A2B)
             mask_all_current_A2B.append(mask_)
             rest_population-=1
 
-        #cross over   
-        elif (s>s1)&(s<=s1+s2):
-            mask1,mask2 = crossover(mask_all_A2B,population,current_fitness_A2B,bit_len)
+        #cross over: chose two individual with selection and swap these channel binary string
+        elif (s>prob_select) & (s<=prob_select+prob_cross):
+            mask1, mask2 = crossover(mask_all_A2B, current_fitness_A2B,bit_len)
             
             if rest_population<=1:
                 mask_all_current_A2B.append(mask1)
@@ -716,24 +700,17 @@ for generation in range(max_generation):
                 mask_all_current_A2B.append(mask2)
                 rest_population-=2
         
-        #mutation
+        #mutation: swap binary string 0->1, 1->0 in range
         else :
-            mask_=mutation(mask_all_A2B,population,current_fitness_A2B,bit_len)
+            mask_ = mutation(mask_all_A2B, current_fitness_A2B,bit_len)
             mask_all_current_A2B.append(mask_)
             rest_population-=1
             
     mask_all_A2B= mask_all_current_A2B
     
-    for i in range(int(population/8)):
-        caculate_fitness(mask_all_A2B[i*8],mask_best_B2A,0,i*8,'A2B')
-        caculate_fitness(mask_all_A2B[i*8+1],mask_best_B2A,0,i*8+1,'A2B')
-        caculate_fitness(mask_all_A2B[i*8+2],mask_best_B2A,0,i*8+2,'A2B')
-        caculate_fitness(mask_all_A2B[i*8+3],mask_best_B2A,0,i*8+3,'A2B')
-        caculate_fitness(mask_all_A2B[i*8+4],mask_best_B2A,0,i*8+4,'A2B')
-        caculate_fitness(mask_all_A2B[i*8+5],mask_best_B2A,0,i*8+5,'A2B')
-        caculate_fitness(mask_all_A2B[i*8+6],mask_best_B2A,0,i*8+6,'A2B')
-        caculate_fitness(mask_all_A2B[i*8+7],mask_best_B2A,0,i*8+7,'A2B')
-    
+    for i in range(population):
+        caculate_fitness(mask_all_A2B[i],mask_best_B2A,0,i,'A2B')
+
     print('A2B')
     mask_best_A2B=mask_all_A2B[np.argmax(current_fitness_A2B)]
     mask_best_A2B_full=compute_layer_mask(mask_best_A2B,mask_chns)
@@ -756,14 +733,14 @@ for generation in range(max_generation):
     while(rest_population>0):
         s=np.random.uniform(0,1)
         #selection
-        if s<s1:
-            mask_,_=roulette(mask_all_B2A,population,current_fitness_B2A)
+        if s<prob_select:
+            mask_ = selection(mask_all_B2A,current_fitness_B2A)
             mask_all_current_B2A.append(mask_)
             rest_population-=1
 
-        #cross over   
-        elif (s>s1)&(s<=s1+s2):
-            mask1,mask2 = crossover(mask_all_B2A,population,current_fitness_B2A,bit_len)
+        #cross over
+        elif (s>prob_select)&(s<=prob_select+prob_cross): 
+            mask1, mask2 = crossover(mask_all_B2A,current_fitness_B2A, bit_len)
             
             if rest_population<=1:
                 mask_all_current_B2A.append(mask1)
@@ -774,23 +751,16 @@ for generation in range(max_generation):
                 mask_all_current_B2A.append(mask2)
                 rest_population-=2
         
-        #mutation
+        #mutation: 
         else :
-            mask_=mutation(mask_all_B2A,population,current_fitness_B2A,bit_len)
+            mask_=mutation(mask_all_B2A, current_fitness_B2A,bit_len)
             mask_all_current_B2A.append(mask_)
             rest_population-=1
             
     mask_all_B2A= mask_all_current_B2A
 
-    for i in range(int(population/8)):
-        caculate_fitness(mask_all_A2B[i*8],mask_best_B2A,0,i*8,'B2A')
-        caculate_fitness(mask_all_A2B[i*8+1],mask_best_B2A,0,i*8+1,'B2A')
-        caculate_fitness(mask_all_A2B[i*8+2],mask_best_B2A,0,i*8+2,'B2A')
-        caculate_fitness(mask_all_A2B[i*8+3],mask_best_B2A,0,i*8+3,'B2A')
-        caculate_fitness(mask_all_A2B[i*8+4],mask_best_B2A,0,i*8+4,'B2A')
-        caculate_fitness(mask_all_A2B[i*8+5],mask_best_B2A,0,i*8+5,'B2A')
-        caculate_fitness(mask_all_A2B[i*8+6],mask_best_B2A,0,i*8+6,'B2A')
-        caculate_fitness(mask_all_A2B[i*8+7],mask_best_B2A,0,i*8+7,'B2A')
+    for i in range(population):
+        caculate_fitness(mask_best_A2B,mask_all_B2A[i],0,i,'B2A')
     
     mask_best_B2A=mask_all_B2A[np.argmax(current_fitness_B2A)]
     print('B2A')
